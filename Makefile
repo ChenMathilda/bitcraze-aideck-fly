@@ -15,7 +15,9 @@
 CRAZYFLIE_BASE = ../crazyflie-firmware
 # sss
 
-EXTRA_CFLAGS += -I$(PWD)/src/control
+EXTRA_CFLAGS += -I$(PWD)/src/control_task
+EXTRA_CFLAGS += -I$(PWD)/src/uart_task
+
 #
 # We override the default OOT_CONFIG here, we could also name our config
 # to oot-config and that would be the default.
