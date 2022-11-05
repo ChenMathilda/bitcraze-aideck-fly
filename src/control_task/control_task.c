@@ -19,7 +19,7 @@
 
 #define DEBUG_MODULE "CONTROL_TASK"
 
-static const float velMax = 1.0f;
+static const float velMax = 0.5f;
 static const uint16_t radius = 300;
 
 const float alpha = 0.7;
@@ -32,6 +32,9 @@ static float angleTheta;
 
 extern float steer;
 extern float coll;
+extern float test_vx;
+extern float test_vy;
+extern float test_height;
 
 typedef enum
 {
@@ -63,23 +66,28 @@ void controlTask(void *param)
 {
     static setpoint_t setpoint;
 
-    vTaskDelay(M2T(3000));
+    vTaskDelay(M2T(300));
 
     DEBUG_PRINT("Fly contol, waiting for steer and collsion!\n");
     int i = 0;
     while (1)
     {
         vTaskDelay(M2T(10));
-        
-        if (state == unlocked)
+        // DEBUG_PRINT("i:%d\t",i++);
+        if(i > 2000)
+        {
+            state = stopping;
+        }
+        if (state == unlocked && i <= 2000)
         {
             DEBUG_PRINT("State:unlocked!\n");
             velUsual = (1 - alpha) * velUsual + alpha * (1 - coll) * velMax;
             angleTheta = (1 - beta) * angleTheta + angleTheta * (PI / 2) * steer;
-            DEBUG_PRINT("Velocity:%.2f,Steering:%.2f", velUsual, angleTheta);
+            // DEBUG_PRINT("steer:%.2f \t coll:%.2f \t vx:%.2f \t vy:%.2f \t h:%.2f\n", steer, coll, test_vx,test_vy,test_height);
+            DEBUG_PRINT("velUsual:%.2f \t angleTheta:%.2f\n", velUsual, angleTheta);
             if (1)
             {
-                setHoverSetpoint(&setpoint, velUsual, velUsual, flyHeight, angleTheta);
+                setHoverSetpoint(&setpoint, test_vx, test_vy, test_height, 0);
                 commanderSetSetpoint(&setpoint, 3);
             }
 
@@ -88,24 +96,23 @@ void controlTask(void *param)
         {
             if(state == idle)
             {
-                DEBUG_PRINT("State:idle!\n");
-                state = lowUnlock;
+                DEBUG_PRINT("State:idle!\t");
                 vTaskDelay(M2T(5000));
+                state = lowUnlock;
             }
 
             if(state == lowUnlock)
             {
-                DEBUG_PRINT("State:lowUnlock!\n");
+                DEBUG_PRINT("State:lowUnlock!\t");
                 state = unlocked;
             }
 
             if(state == stopping)
             {
                 DEBUG_PRINT("State:stopping!\n");
-                memser(&setpoint, 0, sizeof(setpoint_t));
+                memset(&setpoint, 0, sizeof(setpoint_t));
                 commanderSetSetpoint(&setpoint, 3);
             }
-
         }
     }
 }

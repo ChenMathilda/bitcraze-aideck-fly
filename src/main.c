@@ -28,8 +28,7 @@ TaskHandle_t appMainTask_Handlar;
 
 void appMainTask(void *param);
 
-void appMain()
-{
+void appMain(){
     DEBUG_PRINT("appMain Hello!\n");
 
     BaseType_t app_return = pdPASS;
@@ -37,7 +36,6 @@ void appMain()
     if (pdPASS == app_return)
         DEBUG_PRINT("Create appMainTask Successfully!\n");
 
-    vTaskStartScheduler();
 }
 
 void appMainTask(void *param)
