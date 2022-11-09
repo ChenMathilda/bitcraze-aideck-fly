@@ -14,10 +14,17 @@
 #include "log.h"
 #include "param.h"
 
+#include "crtp.h"
+#include "crtp_commander_high_level.h"
+
 #include "control_task.h"
 #include "uart_task.h"
 
 #define DEBUG_MODULE "CONTROL_TASK"
+// #include "debug.h"
+
+#define LOOP 200
+#define FLAG false
 
 static const float velMax = 0.5f;
 static const uint16_t radius = 300;
@@ -73,41 +80,44 @@ void controlTask(void *param)
     while (1)
     {
         vTaskDelay(M2T(10));
-        // DEBUG_PRINT("i:%d\t",i++);
-        if(i > 2000)
+        DEBUG_PRINT("%d\t", i++);
+        if (i > LOOP)
         {
             state = stopping;
         }
-        if (state == unlocked && i <= 2000)
+        if (state == unlocked && i <= LOOP)
         {
-            DEBUG_PRINT("State:unlocked!\n");
+            // DEBUG_PRINT("State:unlocked!\n");
             velUsual = (1 - alpha) * velUsual + alpha * (1 - coll) * velMax;
-            angleTheta = (1 - beta) * angleTheta + angleTheta * (PI / 2) * steer;
+            angleTheta = (1 - beta) * angleTheta + beta * (PI / 2) * steer;
             // DEBUG_PRINT("steer:%.2f \t coll:%.2f \t vx:%.2f \t vy:%.2f \t h:%.2f\n", steer, coll, test_vx,test_vy,test_height);
             DEBUG_PRINT("velUsual:%.2f \t angleTheta:%.2f\n", velUsual, angleTheta);
-            if (1)
-            {
-                setHoverSetpoint(&setpoint, test_vx, test_vy, test_height, 0);
-                commanderSetSetpoint(&setpoint, 3);
-            }
-
+            // if (FLAG)
+            // {
+            //     setHoverSetpoint(&setpoint, test_vx, test_vy, test_height, 0);
+            //     commanderSetSetpoint(&setpoint, 3);
+            // }
+            // else
+            // {
+            crtpCommanderHighLevelTakeoff(test_height, 2.0f);
+            // }
         }
         else
         {
-            if(state == idle)
+            if (state == idle)
             {
-                DEBUG_PRINT("State:idle!\t");
+                DEBUG_PRINT("State:idle!\n");
                 vTaskDelay(M2T(5000));
                 state = lowUnlock;
             }
 
-            if(state == lowUnlock)
+            if (state == lowUnlock)
             {
-                DEBUG_PRINT("State:lowUnlock!\t");
+                DEBUG_PRINT("State:lowUnlock!\n");
                 state = unlocked;
             }
 
-            if(state == stopping)
+            if (state == stopping)
             {
                 DEBUG_PRINT("State:stopping!\n");
                 memset(&setpoint, 0, sizeof(setpoint_t));

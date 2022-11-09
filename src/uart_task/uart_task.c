@@ -19,7 +19,10 @@
 #include "uart_dma_pulp.h"
 #include "log.h"
 
-#define DEBUG_MODULE "HELLOWORLD"
+#define DEBUG_MODULE "UART_TASK"
+#include "debug.h"
+
+
 #define BUFFERSIZE 1
 #define BUFFERDATA 2
 

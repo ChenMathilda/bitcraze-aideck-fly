@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "uart_dma_pulp.h": "c"
+        "uart_dma_pulp.h": "c",
+        "debug.h": "c"
     }
 }
