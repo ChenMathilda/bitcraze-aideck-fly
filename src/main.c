@@ -30,7 +30,7 @@ void appMainTask(void *param);
 
 void appMain(){
     DEBUG_PRINT("appMain Hello!\n");
-
+    vTaskDelay(M2T(3000));
     BaseType_t app_return = pdPASS;
     app_return = xTaskCreate(appMainTask,"app main task",APP_STACK_SIZE,NULL,APP_MAIN_PRI,appMainTask_Handlar);
     // if (pdPASS == app_return)
