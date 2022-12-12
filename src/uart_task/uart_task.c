@@ -23,7 +23,7 @@
 #include "debug.h"
 
 
-/// @brief /////////////// UART ///////////////////////
+/// @brief /////////////// SMOOTH ///////////////////////
 const char start = 's';
 const char end = 'e';
 typedef struct
@@ -35,30 +35,28 @@ typedef struct
 }smoothData_t;
 static smoothData_t smoothData;
 
-
+/// @brief /////////////// UART ///////////////////////
 #define BUFFERSIZE 1
 #define BUFFERDATA 4
 static uint8_t aideckRxBuffer[BUFFERSIZE];
 static uint8_t aideckRxDataStruct[BUFFERDATA];
 // static uint8_t log_counter;
-static uint8_t index;
-
+static uint8_t buff_index;
 volatile uint8_t dma_flag = 0;
 
+/// @brief /////////////// CONTROL ///////////////////////
 float steer;
 float coll;
+// uint8_t signal;
 
-float test_vx = 0.0f;
-float test_vy = 0.0f;
-float test_height = 0.3f;
-
-void parseData(uint8_t *data)
+void smooth_Data(uint8_t *data)
 {
 	smoothData.steer[smoothData.index_insert] = data[1];
 	smoothData.coll[smoothData.index_insert] = data[2];
 	// smoothData.signal[smoothData.index_insert] = data[3];
 	smoothData.index_insert = (smoothData.index_insert + 1) % 3;
 
+	//average smooth	
 	steer = (smoothData.steer[0] + smoothData.steer[1] + smoothData.steer[2]) / 3.0f;
 	coll = (smoothData.coll[0] + smoothData.coll[1] + smoothData.coll[2]) / 3.0f;
 	// signal;
@@ -74,20 +72,20 @@ void receiveDataFromUart() // put 4 bits data into buffer
 	{
 		if (aideckRxBuffer[0] == start)
 		{
-			aideckRxDataStruct[index++] = aideckRxBuffer[0];
+			aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
 		}
 		else if(aideckRxBuffer[0] == end)
 		{
-			aideckRxDataStruct[index++] = aideckRxBuffer[0];
-			parseData(aideckRxDataStruct);
+			aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
+			smooth_Data(aideckRxDataStruct);
 			memset(aideckRxDataStruct, 0, sizeof(uint8_t) * BUFFERDATA); // clear the data buffer
-			index = index % BUFFERDATA;
+			buff_index = buff_index % BUFFERDATA;
 		}
 		else
 		{
-			if (index > 0 && index < BUFFERDATA-1)
+			if (buff_index > 0 && buff_index < BUFFERDATA-1)
 			{
-				aideckRxDataStruct[index++] = aideckRxBuffer[0];
+				aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
 			}
 			// else	
 		}
@@ -116,6 +114,6 @@ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)
 	// log_counter++;
 }
 
-LOG_GROUP_START(log_test)
-LOG_ADD(LOG_UINT32, test_variable_x, &log_counter)
-LOG_GROUP_STOP(log_test)
+// LOG_GROUP_START(log_test)
+// LOG_ADD(LOG_UINT32, test_variable_x, &log_counter)
+// LOG_GROUP_STOP(log_test)
