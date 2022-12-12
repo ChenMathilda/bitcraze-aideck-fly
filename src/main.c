@@ -32,7 +32,7 @@ void appMain(){
     DEBUG_PRINT("appMain Hello!\n");
 
     BaseType_t app_return = pdPASS;
-    app_return = xTaskCreate(appMainTask,"app main task",APP_STACK_SIZE,NULL,APP_MAIN_PRI,appMainTask_Handlar);
+    app_return = xTaskCreate(appMainTask,"app main task",APP_STACK_SIZE,NULL,APP_MAIN_PRI,&appMainTask_Handlar);
     if (pdPASS == app_return)
         DEBUG_PRINT("Create appMainTask Successfully!\n");
 
@@ -46,11 +46,11 @@ void appMainTask(void *param)
     BaseType_t uart_return = pdPASS;
     BaseType_t control_return = pdPASS;
 
-    uart_return = xTaskCreate(uartTask, "uart task", UART_STACK_SIZE, NULL, UART_TASK_PRI, controlTask_Handlar);
+    uart_return = xTaskCreate(uartTask, "uart task", UART_STACK_SIZE, NULL, UART_TASK_PRI, &controlTask_Handlar);
     if (pdPASS == uart_return)
         DEBUG_PRINT("Create uartTask Successfully!\n");
 
-    control_return = xTaskCreate(controlTask, "fly control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, controlTask_Handlar);
+    control_return = xTaskCreate(controlTask, "fly control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, &controlTask_Handlar);
     if (pdPASS == control_return)
         DEBUG_PRINT("Create controlTask Successfully!\n");
 

@@ -20,28 +20,24 @@
 #include "control_task.h"
 #include "uart_task.h"
 
-#define DEBUG_MODULE "CONTROL_TASK"
-// #include "debug.h"
+#define DEBUG_MODULE "CTRL_TASK"
+#include "debug.h"
 
-#define LOOP 200
+#define LOOP 1000
 #define FLAG false
 
-static const float velMax = 0.5f;
-static const uint16_t radius = 300;
+static const float velMax = 0.2f;
 
 const float alpha = 0.7;
 const float beta = 0.5;
 const float PI = 180.0;
-const float flyHeight = 0.8; //fixed fly height
+const float flyHeight = 0.5; //fixed fly height
 
 static float velUsual;
 static float angleTheta;
-
 extern float steer;
 extern float coll;
-extern float test_vx;
-extern float test_vy;
-extern float test_height;
+extern uint8_t signal;
 
 typedef enum
 {
@@ -57,24 +53,20 @@ static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, 
 {
     setpoint->mode.z = modeAbs;
     setpoint->position.z = z;
-
     setpoint->mode.yaw = modeVelocity;
     setpoint->attitudeRate.yaw = yawrate;
-
     setpoint->mode.x = modeVelocity;
     setpoint->mode.y = modeVelocity;
     setpoint->velocity.x = vx;
     setpoint->velocity.y = vy;
-
     setpoint->velocity_body = true;
+    commanderSetSetpoint(setpoint, 3);
 }
 
 void controlTask(void *param)
 {
     static setpoint_t setpoint;
-
     vTaskDelay(M2T(300));
-
     DEBUG_PRINT("Fly contol, waiting for steer and collsion!\n");
     int i = 0;
     while (1)
@@ -87,27 +79,20 @@ void controlTask(void *param)
         }
         if (state == unlocked && i <= LOOP)
         {
-            // DEBUG_PRINT("State:unlocked!\n");
-            velUsual = (1 - alpha) * velUsual + alpha * (1 - coll) * velMax;
-            angleTheta = (1 - beta) * angleTheta + beta * (PI / 2) * steer;
-            // DEBUG_PRINT("steer:%.2f \t coll:%.2f \t vx:%.2f \t vy:%.2f \t h:%.2f\n", steer, coll, test_vx,test_vy,test_height);
-            DEBUG_PRINT("velUsual:%.2f \t angleTheta:%.2f\n", velUsual, angleTheta);
-            // if (FLAG)
-            // {
-            //     setHoverSetpoint(&setpoint, test_vx, test_vy, test_height, 0);
-            //     commanderSetSetpoint(&setpoint, 3);
-            // }
-            // else
-            // {
-            crtpCommanderHighLevelTakeoff(test_height, 2.0f);
-            // }
+            velUsual = (float)((1 - alpha) * velUsual + alpha * (1 - coll) * velMax);
+            angleTheta = (float)((1 - beta) * angleTheta + beta * (PI / 2) * steer);
+            double curtime = (double)xTaskGetTickCount() / 1000;
+            DEBUG_PRINT("%lf \t velUsual:%.2f \t angleTheta:%.2f\n", curtime, velUsual, angleTheta);
+            if (FLAG)
+                setHoverSetpoint(&setpoint, test_vx, test_vy, test_height, 0);
+            else
+                crtpCommanderHighLevelTakeoff(test_height, 2.0f);
         }
         else
         {
             if (state == idle)
             {
                 DEBUG_PRINT("State:idle!\n");
-                vTaskDelay(M2T(5000));
                 state = lowUnlock;
             }
 
@@ -120,8 +105,14 @@ void controlTask(void *param)
             if (state == stopping)
             {
                 DEBUG_PRINT("State:stopping!\n");
-                memset(&setpoint, 0, sizeof(setpoint_t));
-                commanderSetSetpoint(&setpoint, 3);
+                if(FLAG)
+                {
+                    memset(&setpoint, 0, sizeof(setpoint_t));
+                    commanderSetSetpoint(&setpoint, 3);
+                }
+                else
+                    crtpCommanderHighLevelStop();
+                return;
             }
         }
     }

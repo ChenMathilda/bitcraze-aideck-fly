@@ -1,6 +1,9 @@
 {
     "files.associations": {
+        "*.py": "python",
         "uart_dma_pulp.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "uart_task.h": "c",
+        "control_task.h": "c"
     }
 }
