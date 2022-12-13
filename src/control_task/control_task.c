@@ -20,22 +20,17 @@
 #define LOOP 1000
 #define FLAG true
 
-static const float velMax = 0.2f;
-static const uint16_t radius = 300;
-
 const float alpha = 0.7;
 const float beta = 0.5;
 const float PI = 180.0;
-const float flyHeight = 0.8; //fixed fly height
+const float flyHeight = 0.4f; //fixed fly height
+const float velMax = 0.2f;
 
 static float velUsual;
 static float angleTheta;
 
 extern float steer;
 extern float coll;
-extern float test_vx;
-extern float test_vy;
-extern float test_height;
 
 typedef enum
 {
@@ -82,12 +77,12 @@ void controlTask(void *param)
             DEBUG_PRINT("%d\tvelUsual:%.2f \t angleTheta:%.2f \n",i++, velUsual, angleTheta);
             if (FLAG)
             {
-                setHoverSetpoint(&setpoint, velUsual, 0, 0.3f, angleTheta);
+                setHoverSetpoint(&setpoint, velUsual, 0, flyHeight, angleTheta);
                 commanderSetSetpoint(&setpoint, 3);
             }
             else
             {
-                crtpCommanderHighLevelTakeoff(0.3f, 2.0f);
+                crtpCommanderHighLevelTakeoff(flyHeight, 2.0f);
             }
         }
         else

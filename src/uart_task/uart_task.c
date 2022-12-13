@@ -22,7 +22,6 @@
 #define DEBUG_MODULE "UART_TASK"
 #include "debug.h"
 
-
 #define BUFFERSIZE 1
 #define BUFFERDATA 2
 
@@ -37,7 +36,7 @@ float coll;
 
 float test_vx = 0.0f;
 float test_vy = 0.0f;
-float test_height = 0.3f;
+float test_height = 0.4f;
 
 void uartTask(void *param)
 {
