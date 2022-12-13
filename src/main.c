@@ -50,7 +50,7 @@ void appMainTask(void *param)
     if (pdPASS == uart_return)
         DEBUG_PRINT("Create uartTask Successfully!\n");
 
-    control_return = xTaskCreate(controlTask, "fly control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, &controlTask_Handlar);
+    control_return = xTaskCreate(controlTask, "control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, &controlTask_Handlar);
     if (pdPASS == control_return)
         DEBUG_PRINT("Create controlTask Successfully!\n");
 

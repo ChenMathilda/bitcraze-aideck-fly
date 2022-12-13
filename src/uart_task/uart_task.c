@@ -22,7 +22,6 @@
 #define DEBUG_MODULE "UART_TASK"
 #include "debug.h"
 
-
 /// @brief /////////////// SMOOTH ///////////////////////
 const char start = 's';
 const char end = 'e';
@@ -32,7 +31,7 @@ typedef struct
 	uint8_t coll[3];
 	// uint8_t signal[3];
 	uint8_t index_insert;
-}smoothData_t;
+} smoothData_t;
 static smoothData_t smoothData;
 
 /// @brief /////////////// UART ///////////////////////
@@ -56,41 +55,56 @@ void smooth_Data(uint8_t *data)
 	// smoothData.signal[smoothData.index_insert] = data[3];
 	smoothData.index_insert = (smoothData.index_insert + 1) % 3;
 
-	//average smooth	
+	// average smooth
 	steer = (smoothData.steer[0] + smoothData.steer[1] + smoothData.steer[2]) / 3.0f;
 	coll = (smoothData.coll[0] + smoothData.coll[1] + smoothData.coll[2]) / 3.0f;
 	// signal;
-	
+
 	steer = (double)steer / 10 - 2;
 	coll = (double)coll / 100;
 	// signal;
+
+	DEBUG_PRINT("steer: %.2lf\t coll: %.2lf\n",steer,coll);
+
 }
 
-void receiveDataFromUart() // put 4 bits data into buffer
+void receiveDataFromUart(uint8_t *data) // put 4 bits data into buffer
 {
-	while (dma_flag)
+
+	if(buff_index == 0)
 	{
-		if (aideckRxBuffer[0] == start)
+		if (data[0] != start)
 		{
-			aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
+			return;
 		}
-		else if(aideckRxBuffer[0] == end)
+		else
 		{
-			aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
+			aideckRxDataStruct[buff_index++] = data[0];
+		}
+	}
+	else if (buff_index == BUFFERDATA - 1)
+	{
+		if (data[0] != end)
+		{
+			memset(aideckRxDataStruct, 0, sizeof(uint8_t) * BUFFERDATA); // clear the data buffer
+			buff_index = 0;
+			return;
+		}
+		else
+		{
+			aideckRxDataStruct[buff_index++] = data[0];
 			smooth_Data(aideckRxDataStruct);
 			memset(aideckRxDataStruct, 0, sizeof(uint8_t) * BUFFERDATA); // clear the data buffer
 			buff_index = buff_index % BUFFERDATA;
 		}
-		else
-		{
-			if (buff_index > 0 && buff_index < BUFFERDATA-1)
-			{
-				aideckRxDataStruct[buff_index++] = aideckRxBuffer[0];
-			}
-			// else	
-		}
-		memset(aideckRxBuffer, 0, sizeof(uint8_t) * BUFFERSIZE);// clear the dma buffer
-		dma_flag = 0;
+	}
+	else if (buff_index > 0 && buff_index < BUFFERDATA - 1)
+	{
+		aideckRxDataStruct[buff_index++] = data[0];
+	}
+	else
+	{
+		return;
 	}
 }
 
@@ -103,7 +117,9 @@ void uartTask(void *param)
 	{
 		vTaskDelay(M2T(10));
 		curtime = (double)xTaskGetTickCount() / 1000;
-		receiveDataFromUart();
+		receiveDataFromUart(aideckRxBuffer);
+		memset(aideckRxBuffer, 0, sizeof(uint8_t) * BUFFERSIZE); // clear the dma buffer
+		dma_flag = 0;
 	}
 }
 
@@ -117,3 +133,4 @@ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)
 // LOG_GROUP_START(log_test)
 // LOG_ADD(LOG_UINT32, test_variable_x, &log_counter)
 // LOG_GROUP_STOP(log_test)
+
