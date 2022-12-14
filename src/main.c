@@ -29,8 +29,6 @@ TaskHandle_t appMainTask_Handlar;
 void appMainTask(void *param);
 
 void appMain(){
-    DEBUG_PRINT("appMain Hello!\n");
-
     BaseType_t app_return = pdPASS;
     app_return = xTaskCreate(appMainTask,"app main task",APP_STACK_SIZE,NULL,APP_MAIN_PRI,&appMainTask_Handlar);
     if (pdPASS == app_return)
@@ -50,9 +48,9 @@ void appMainTask(void *param)
     if (pdPASS == uart_return)
         DEBUG_PRINT("Create uartTask Successfully!\n");
 
-    control_return = xTaskCreate(controlTask, "control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, &controlTask_Handlar);
-    if (pdPASS == control_return)
-        DEBUG_PRINT("Create controlTask Successfully!\n");
+    // control_return = xTaskCreate(controlTask, "control task", CONTROL_STACK_SIZE, NULL, CONTROL_TASK_PRI, &controlTask_Handlar);
+    // if (pdPASS == control_return)
+        // DEBUG_PRINT("Create controlTask Successfully!\n");
 
     vTaskDelete(appMainTask_Handlar);
     taskEXIT_CRITICAL();  
