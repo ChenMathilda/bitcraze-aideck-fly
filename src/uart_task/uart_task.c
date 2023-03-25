@@ -1,71 +1,83 @@
 /*-----------------------------------------------------------------------------
  Copyright (C) 2020-2021 ETH Zurich, Switzerland, University of Bologna, Italy.
- All rights reserved.                                                           
-                                                                                                                                                                                                         
- File:    main.c   
- Author:  Vlad Niculescu      <vladn@iis.ee.ethz.ch>                           
- Date:    15.03.2021                                                           
+ All rights reserved.
+
+ File:    main.c
+ Author:  Vlad Niculescu      <vladn@iis.ee.ethz.ch>
+ Date:    15.03.2021
 -------------------------------------------------------------------------------*/
 
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <time.h>
 
 #include "app.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "debug.h"
-#include "uart_dma_pulp.h"
 #include "log.h"
+#include "uart_dma_pulp.h"
 
-#define DEBUG_MODULE "UART_TASK"
+#define DEBUG_MODULE "UART"
 #include "debug.h"
-
 #define BUFFERSIZE 1
-#define BUFFERDATA 2
-
+#define DMASIZE 3
 uint8_t aideckRxBuffer[BUFFERSIZE];
+uint8_t aideckRxDMA[DMASIZE];
+
 volatile uint8_t dma_flag = 0;
 uint8_t log_counter = 0;
-static uint8_t aideckRxData[BUFFERDATA];
-uint8_t flag = 0;
+static uint8_t flag;
 
-float steer;
-float coll;
+typedef struct 
+{
+	float steer;
+	float coll;
+	float sign;
+	bool refresh;
+}control_data_t;
+static control_data_t control_data;
 
-float test_vx = 0.0f;
-float test_vy = 0.0f;
-float test_height = 0.4f;
+bool ctlGetUartInfo(float* steer, float* coll, float* sign) {
+  if(control_data.refresh==true) {
+    control_data.refresh== false;
+    *steer = control_data.steer;
+	*coll = control_data.coll;
+	*sign = control_data.sign;
+    return(true);
+  }else {
+    return(false);
+  }
+}
+
 
 void uartTask(void *param)
 {
 	DEBUG_PRINT("uart task started! \n");
 	USART_DMA_Start(115200, aideckRxBuffer, BUFFERSIZE);
 
-	double curtime;
-
 	while (1)
 	{
-		vTaskDelay(M2T(10));
-		if (log_counter < 5)
+		vTaskDelay(M2T(50));
+		if (log_counter <= 9)
 		{
-			memset(aideckRxBuffer, 0, sizeof(uint8_t) * BUFFERSIZE); // clear the dma buffer
-			memset(aideckRxData, 0, sizeof(uint8_t) * BUFFERDATA);
+			memset(aideckRxBuffer, 0, BUFFERSIZE); // clear the dma buffer
+			memset(aideckRxDMA, 0, DMASIZE);	   // clear the dma buffer
 			continue;
 		}
 		if (dma_flag == 1)
 		{
-			aideckRxData[flag++] = aideckRxBuffer[0];
 			dma_flag = 0; // clear the flag
-			memset(aideckRxBuffer, 0, sizeof(uint8_t) * BUFFERSIZE);
-			if (flag == BUFFERDATA)
+			aideckRxDMA[flag++] = aideckRxBuffer[0];
+			memset(aideckRxBuffer, 0, BUFFERSIZE); // clear the dma buffer
+			if (flag == DMASIZE)
 			{
-				// curtime = (double)xTaskGetTickCount() / 1000;//for debug
-				steer = (double)aideckRxData[0] / 10 - 2;
-				coll = (double)aideckRxData[1] / 100;
-				// DEBUG_PRINT("%.2f \t %.2f\n", steer, coll);
-				memset(aideckRxData, 0, sizeof(uint8_t) * BUFFERDATA); // clear the dma buffer
+				control_data.steer = (double)aideckRxDMA[0] / 100 - 1;
+				control_data.coll = (double)aideckRxDMA[1] / 100;
+				control_data.sign = (double)aideckRxDMA[2] / 100;
+				control_data.refresh = true;
+				// DEBUG_PRINT("collision:%.2f \t steer:%.2f \t sign: %.f\n", control_data.coll, control_data.steer, control_data.sign);
+				memset(aideckRxDMA, 0, DMASIZE); // clear the dma buffer
 				flag = 0;
 			}
 		}
@@ -80,5 +92,5 @@ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)
 }
 
 LOG_GROUP_START(log_test)
-LOG_ADD(LOG_UINT32, test_variable_x, &log_counter)
+LOG_ADD(LOG_UINT8, test_variable_x, &log_counter)
 LOG_GROUP_STOP(log_test)

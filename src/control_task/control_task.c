@@ -14,34 +14,55 @@
 #include "control_task.h"
 #include "uart_task.h"
 
-#define DEBUG_MODULE "CRTL_TASK"
-// #include "debug.h"
-
-#define LOOP 1000
-#define FLAG true
+#define DEBUG_MODULE "CRTL"
+#include "debug.h"
 
 const float alpha = 0.7;
 const float beta = 0.5;
 const float PI = 180.0;
-const float flyHeight = 0.4f; //fixed fly height
-const float velMax = 0.2f;
+const float flyHeight = 0.3f; // fixed fly height
+const float velMax = 0.1f;
 
 static float velUsual;
 static float angleTheta;
 
-extern float steer;
-extern float coll;
+static float steer;
+static float coll;
+static float sign;
 
 typedef enum
 {
     idle,
-    lowUnlock,
     unlocked,
     stopping
 } State;
-
-
 static State state = idle;
+typedef struct
+{
+    float_t steer_ctl[3];
+    float_t coll_ctl[3];
+    uint8_t index;
+} median_data_t;
+
+static median_data_t median_data;
+
+static float_t median_filter_3(float_t *data)
+{
+    float_t middle;
+    if ((data[0] <= data[1]) && (data[0] <= data[2]))
+    {
+        middle = (data[1] <= data[2]) ? data[1] : data[2];
+    }
+    else if ((data[1] <= data[0]) && (data[1] <= data[2]))
+    {
+        middle = (data[0] <= data[2]) ? data[0] : data[2];
+    }
+    else
+    {
+        middle = (data[0] <= data[1]) ? data[0] : data[1];
+    }
+    return middle;
+}
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
 {
@@ -58,62 +79,36 @@ static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, 
 
 void controlTask(void *param)
 {
-    static uint16_t i;
     static setpoint_t setpoint;
-    DEBUG_PRINT("CRTL_TASK:control task started!\n");
+    DEBUG_PRINT("control task started!\n");
 
     while (1)
     {
-        vTaskDelay(M2T(10));
-        // if (i > LOOP)    //for debug
-        // {
-        //     state = stopping;
-        //     // DEBUG_PRINT("State:stopping!\n");
-        // }
+        vTaskDelay(M2T(100));
         if (state == unlocked)
         {
-            velUsual = (1 - alpha) * velUsual + alpha * (1 - coll) * velMax;
-            angleTheta = (1 - beta) * angleTheta + beta * (PI / 2) * steer;
-            DEBUG_PRINT("%d\tvelUsual:%.2f \t angleTheta:%.2f \n",i++, velUsual, angleTheta);
-            if (FLAG)
+            if (ctlGetUartInfo(&steer, &coll, &sign))
             {
-                setHoverSetpoint(&setpoint, velUsual, 0, flyHeight, angleTheta);
-                commanderSetSetpoint(&setpoint, 3);
+                // median_data.steer_ctl[median_data.index] = steer;
+                median_data.coll_ctl[median_data.index] = coll;
+                median_data.index++;
+                if (median_data.index % 3 == 0)
+                    median_data.index = 0;
             }
-            else
-            {
-                crtpCommanderHighLevelTakeoff(flyHeight, 2.0f);
-            }
+            velUsual = (1 - alpha) * velUsual + alpha * (1-median_filter_3(median_data.coll_ctl)) * velMax;
+            angleTheta = ((1 - beta) * angleTheta + beta * (PI / 3) *steer);
+            DEBUG_PRINT("collision:%.2f \t steer:%.2f \t sign: %.f\n", coll, steer, sign);
+            setHoverSetpoint(&setpoint, velUsual, 0, flyHeight, angleTheta);
+            commanderSetSetpoint(&setpoint, 3);
+            // TODO clear angle
+            memset(&steer, 0, sizeof(steer));
+            
         }
-        else
+        else if (state == stopping)
         {
-            if (state == idle)
-            {
-                DEBUG_PRINT("State:idle!\n");
-                state = lowUnlock;
-            }
-
-            if (state == lowUnlock)
-            {
-                DEBUG_PRINT("State:lowUnlock!\n");
-                state = unlocked;
-                DEBUG_PRINT("State:unlocked!\n");
-            }
-
-            if (state == stopping)
-            {      
-                if (FLAG)
-                {
-                    memset(&setpoint, 0, sizeof(setpoint_t));
-                    commanderSetSetpoint(&setpoint, 3);
-                }
-                else
-                {
-                    crtpCommanderHighLevelStop();
-                }
-            }
+            memset(&setpoint, 0, sizeof(setpoint_t));
+            commanderSetSetpoint(&setpoint, 3);
         }
-      
     }
 }
 

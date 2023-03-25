@@ -12,6 +12,8 @@
 }
 #endif
 
-void uartTask(void *param);
 
+
+void uartTask(void *param);
+bool ctlGetUartInfo(float* steer, float* coll, float* sign);
 #endif
