@@ -21,14 +21,14 @@ const float alpha = 0.7;
 const float beta = 0.5;
 const float PI = 180.0;
 const float flyHeight = 0.3f; // fixed fly height
-const float velMax = 0.1f;
+const float velMax = 0.2f;
 
 static float velUsual;
 static float angleTheta;
 
 static float steer;
 static float coll;
-static float sign;
+float sign = 0.5;
 
 typedef enum
 {
@@ -84,24 +84,27 @@ void controlTask(void *param)
 
     while (1)
     {
-        vTaskDelay(M2T(100));
+        vTaskDelay(M2T(250));
         if (state == unlocked)
         {
             if (ctlGetUartInfo(&steer, &coll, &sign))
             {
-                // median_data.steer_ctl[median_data.index] = steer;
-                median_data.coll_ctl[median_data.index] = coll;
-                median_data.index++;
-                if (median_data.index % 3 == 0)
+                if(coll != 0)
+                    median_data.coll_ctl[median_data.index++] = coll;
+                if(median_data.index%3==0)
                     median_data.index = 0;
+                DEBUG_PRINT("collision:%.2f \t",coll);
+                coll = median_filter_3(median_data.coll_ctl);
+                angleTheta = ((1 - beta) * angleTheta + beta * (PI / 3) *steer);
+                velUsual = (1 - alpha) * velUsual + alpha * (1-coll) * velMax;
+                DEBUG_PRINT("angleTheta:%.2f \t velUsual:%.2f \t sign: %.2f\n",angleTheta,velUsual,sign);
+                // DEBUG_PRINT("\t media_coll:%.2f \t velocity: %.2f\n",coll,velUsual);
             }
-            velUsual = (1 - alpha) * velUsual + alpha * (1-median_filter_3(median_data.coll_ctl)) * velMax;
-            angleTheta = ((1 - beta) * angleTheta + beta * (PI / 3) *steer);
-            DEBUG_PRINT("collision:%.2f \t steer:%.2f \t sign: %.f\n", coll, steer, sign);
             setHoverSetpoint(&setpoint, velUsual, 0, flyHeight, angleTheta);
             commanderSetSetpoint(&setpoint, 3);
             // TODO clear angle
             memset(&steer, 0, sizeof(steer));
+            memset(&sign,0.5,sizeof(sign));
             
         }
         else if (state == stopping)

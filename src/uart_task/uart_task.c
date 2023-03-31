@@ -29,27 +29,32 @@ volatile uint8_t dma_flag = 0;
 uint8_t log_counter = 0;
 static uint8_t flag;
 
-typedef struct 
+typedef struct
 {
 	float steer;
 	float coll;
 	float sign;
 	bool refresh;
-}control_data_t;
+} control_data_t;
 static control_data_t control_data;
 
-bool ctlGetUartInfo(float* steer, float* coll, float* sign) {
-  if(control_data.refresh==true) {
-    control_data.refresh== false;
-    *steer = control_data.steer;
-	*coll = control_data.coll;
-	*sign = control_data.sign;
-    return(true);
-  }else {
-    return(false);
-  }
+bool ctlGetUartInfo(float *steer, float *coll, float *sign)
+{
+	if (control_data.refresh == true)
+	{
+		control_data.refresh == false;
+		*steer = control_data.steer;
+		*coll = control_data.coll;
+		*sign = control_data.sign;
+		memset(&control_data.steer, 0, sizeof(control_data.steer));
+		memset(&control_data.sign, 0.5, sizeof(control_data.sign));
+		return (true);
+	}
+	else
+	{
+		return (false);
+	}
 }
-
 
 void uartTask(void *param)
 {
@@ -58,8 +63,8 @@ void uartTask(void *param)
 
 	while (1)
 	{
-		vTaskDelay(M2T(50));
-		if (log_counter <= 9)
+		vTaskDelay(M2T(100));
+		if (log_counter <= 15)
 		{
 			memset(aideckRxBuffer, 0, BUFFERSIZE); // clear the dma buffer
 			memset(aideckRxDMA, 0, DMASIZE);	   // clear the dma buffer
@@ -76,7 +81,7 @@ void uartTask(void *param)
 				control_data.coll = (double)aideckRxDMA[1] / 100;
 				control_data.sign = (double)aideckRxDMA[2] / 100;
 				control_data.refresh = true;
-				// DEBUG_PRINT("collision:%.2f \t steer:%.2f \t sign: %.f\n", control_data.coll, control_data.steer, control_data.sign);
+				// DEBUG_PRINT("steer:%.2f \tcollision:%.2f \t  sign: %.f\n", control_data.steer,control_data.coll,control_data.sign);
 				memset(aideckRxDMA, 0, DMASIZE); // clear the dma buffer
 				flag = 0;
 			}
